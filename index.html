@@ -1,1 +1,515 @@
-Hello World
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zachary D. Kurtz</title>
+<meta name="description" content="Zachary D. Kurtz: scientist, father, educator and musician, experimenting with AI, 3D printing and design.">
+<meta property="og:title" content="Zachary D. Kurtz">
+<meta property="og:description" content="Scientist, father, educator and musician, experimenting with AI, 3D printing and design.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://zdk123.github.io/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='2' fill='%23231c17'/%3E%3Crect x='6' y='6' width='9' height='14' fill='%236fa6e2'/%3E%3Crect x='17' y='6' width='9' height='14' fill='%236fa6e2'/%3E%3Crect x='6' y='20' width='9' height='6' fill='%237bb546'/%3E%3Crect x='17' y='20' width='9' height='6' fill='%237bb546'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #17130f; }
+  * { box-sizing: border-box; }
+  a { text-decoration: none; color: inherit; }
+  @keyframes fall   { from { transform: translateY(-10vh); } to { transform: translateY(110vh); } }
+  @keyframes drift  { 0% { transform: translate(0,-10vh); } 50% { transform: translate(14px,50vh); } 100% { transform: translate(-7px,110vh); } }
+  @keyframes glow   { 0%,100% { opacity: .82; } 50% { opacity: 1; } }
+  @keyframes flick  { 0%,100% { opacity: .85; transform: scaleY(1); } 30% { opacity: 1; transform: scaleY(1.12); } 60% { opacity: .75; transform: scaleY(.92); } }
+  @keyframes clouds { from { transform: translateX(-3%); } to { transform: translateX(3%); } }
+  @keyframes fade   { from { opacity: 0; } to { opacity: 1; } }
+
+  .room { font-family: 'Newsreader', Georgia, serif; min-height: 100vh; min-height: 100svh;
+          display: grid; grid-template-rows: minmax(52vh, 1fr) auto; background: var(--room); color: var(--ink);
+          transition: background 1.4s ease, color 1.4s ease; }
+  .window { position: relative; overflow: hidden; background: var(--sky); transition: background 1.4s ease; }
+  .layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: block; }
+  #scene, #clouds { transition: filter 1.4s ease; }
+  #clouds { animation: clouds 160s ease-in-out infinite alternate; }
+  .p { position: absolute; top: 0; }
+  .bulb { animation: glow 3.4s ease-in-out infinite; }
+  .flame { transform-box: fill-box; transform-origin: 50% 100%; animation: flick 1.3s ease-in-out infinite; }
+  .mullion { background: linear-gradient(90deg, transparent calc(50% - 7px), rgba(255,255,255,.14) calc(50% - 7px), var(--mullion) calc(50% - 6px), var(--mullion) calc(50% + 6px), rgba(0,0,0,.4) calc(50% + 6px), rgba(0,0,0,.4) calc(50% + 7px), transparent calc(50% + 7px)); }
+  .vignette { box-shadow: inset 0 0 90px 30px rgba(0,0,0,.22); }
+
+  .sill { padding: clamp(20px,3.2vh,34px) clamp(22px,5vw,76px) clamp(26px,4.5vh,46px);
+          border-top: 9px solid var(--mullion); background: var(--sill); transition: background 1.4s ease; }
+  .text { max-width: 62ch; display: flex; flex-direction: column; gap: clamp(12px,1.8vh,20px); animation: fade 1.2s ease both; }
+  .text p { margin: 0; font-size: clamp(17px,1.6vw,22px); line-height: 1.55; text-wrap: pretty; }
+  .soft { color: var(--soft); }
+  .text a { font-style: italic; color: var(--ink); border-bottom: 1px solid transparent; transition: border-color .22s ease; }
+  .text a:hover, .text a:focus-visible { border-bottom-color: var(--ink); }
+
+  @media (prefers-reduced-motion: reduce) {
+    #clouds, .bulb, .flame, .p, .text { animation: none !important; }
+    #particles { display: none; }
+  }
+</style>
+</head>
+<body>
+<main class="room">
+  <div class="window" id="win" aria-hidden="true">
+    <svg class="layer" id="clouds" preserveAspectRatio="xMidYMid slice"></svg>
+    <svg class="layer" id="scene"  preserveAspectRatio="xMidYMid slice"></svg>
+    <div class="layer" id="particles"></div>
+    <svg class="layer" id="glow"   preserveAspectRatio="xMidYMid slice"></svg>
+    <div class="layer mullion"></div>
+    <div class="layer vignette"></div>
+  </div>
+
+  <div class="sill">
+    <div class="text">
+      <p id="opener"></p>
+      <p class="soft">I'm Zachary Kurtz. I'm <a href="https://scholar.google.com/citations?user=owAHdjcAAAAJ">a scientist</a>, a father, <a href="https://sps.columbia.edu/person/zachary-kurtz">an educator</a> and <a href="https://www.youtube.com/playlist?list=PLA2C8693B031C9BA1">a musician</a>, and lately I've been experimenting with AI, 3D printing and design.</p>
+      <p class="soft" style="line-height:1.7">Things I'm working on: <a href="https://zdk123.github.io/AccordionChordMap/">a jazz chord map for the accordion</a>,
+        <a href="https://github.com/zdk123/models">some things I've designed for the 3D printer</a>,
+        and <a href="https://github.com/zdk123/SpiecEasi">SpiecEasi</a> and <a href="https://github.com/zdk123/pulsar">pulsar</a>, two R packages for inferring microbial networks.</p>
+      <p class="soft">If you want to say something, <a id="email" href="#">write to me</a>, or find me on
+        <a href="https://github.com/zdk123">GitHub</a>, <a href="https://www.linkedin.com/in/zachary-kurtz-8a1a6896/">LinkedIn</a> and <a href="https://x.com/ledflyd">X</a>.</p>
+    </div>
+  </div>
+</main>
+
+<script>
+// Test overrides via URL: ?hour=21&weather=snow&season=winter (weather: clear | cloudy | rain | snow)
+
+// The window frame, dark like the real one
+const FRAME = "#231c17";
+
+const PHASES = {
+  dawn:  { sky: "linear-gradient(180deg,#3d4a63,#8d7c86 45%,#d9a682 78%,#e8bf95)", room: "#e8e0d5", sill: "#e2d9cc", ink: "#2b241c", soft: "rgba(43,36,28,0.74)", mullion: FRAME,
+           filter: "brightness(.82) saturate(.85) sepia(.12)", wash: "#e8c9c4" },
+  day:   { sky: "linear-gradient(180deg,#3e7ccc,#6fa6e2 50%,#b4d2ee)", room: "#f1ece4", sill: "#eae3d8", ink: "#241e18", soft: "rgba(36,30,24,0.76)", mullion: FRAME,
+           filter: "none" },
+  dusk:  { sky: "linear-gradient(180deg,#2f3856,#6a5470 40%,#c07a5e 75%,#e0a06c)", room: "#3b322a", sill: "#332b24", ink: "#f4ece0", soft: "rgba(244,236,224,0.8)", mullion: FRAME,
+           filter: "brightness(.55) saturate(.75) sepia(.2)", wash: "#d6a9b4" },
+  night: { sky: "linear-gradient(180deg,#0b0f1c,#141b2c 55%,#1d2436)", room: "#1b1611", sill: "#17120e", ink: "#efe4d4", soft: "rgba(239,228,212,0.78)", mullion: FRAME,
+           filter: "brightness(.34) saturate(.5)", wash: "#7f93c8" }
+};
+const GREY_SKY = { dawn: "linear-gradient(180deg,#5d6270,#9a9498)", day: "linear-gradient(180deg,#8e99a5,#b9c1c9 60%,#cdd3d8)",
+                   dusk: "linear-gradient(180deg,#363a4a,#6a6170)", night: "linear-gradient(180deg,#121520,#1c2130)" };
+
+// ---- The yard, drawn in simple perspective ----
+// World units are metres. X: left/right, Y: up, Z: distance from the window.
+const F = 1300, CX = 800, CY = 430, EYE = 1.6;
+const P = (X, Y, Z) => [CX + F * X / Z, CY + F * (EYE - Y) / Z];
+const r1 = n => Math.round(n * 10) / 10;
+// A flat circle at height Y, seen in perspective
+const circ = (X, Y, Z, r, n = 24) => Array.from({ length: n }, (_, i) => P(X + r * Math.cos(i / n * 6.2832), Y, Z + r * Math.sin(i / n * 6.2832)));
+const pts = a => a.map(p => r1(p[0]) + "," + r1(p[1])).join(" ");
+const poly = (a, fill, ex = "") => `<polygon points="${pts(a)}" fill="${fill}" ${ex}/>`;
+const ground = (x1, x2, z1, z2, fill, y = 0) => poly([P(x1, y, z1), P(x2, y, z1), P(x2, y, z2), P(x1, y, z2)], fill);
+const box = (X1, Y1, X2, Y2, Z, fill, ex = "") => { const [a, b] = P(X1, Y1, Z), [c, d] = P(X2, Y2, Z);
+  return `<rect x="${r1(a)}" y="${r1(b)}" width="${r1(c - a)}" height="${r1(d - b)}" fill="${fill}" ${ex}/>`; };
+const line = (p, q, stroke, w, ex = "") => `<line x1="${r1(p[0])}" y1="${r1(p[1])}" x2="${r1(q[0])}" y2="${r1(q[1])}" stroke="${stroke}" stroke-width="${w}" ${ex}/>`;
+function rng(seed) { return () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed;
+  t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const pick = (R, a) => a[Math.floor(R() * a.length)];
+
+// Things the glow layer needs to know about, filled in by buildScene()
+let WINDOWS = [], BULBS = [], PIT = null;
+
+function treeSVG(R, x, y, len, ang, wid, depth, out, tips) {
+  const x2 = x + Math.sin(ang) * len, y2 = y - Math.cos(ang) * len;
+  out.push(`<path d="M${r1(x)} ${r1(y)}L${r1(x2)} ${r1(y2)}" stroke-width="${r1(wid)}"/>`);
+  if (depth === 0) { tips.push([x2, y2]); return; }
+  if (depth < 6) tips.push([x2, y2, 1]);
+  const n = depth > 5 ? 2 : R() < .55 ? 2 : 3;
+  for (let i = 0; i < n; i++)
+    treeSVG(R, x2, y2, len * (.66 + R() * .14), ang + (i - (n - 1) / 2) * (.42 + R() * .2) + (R() - .5) * .3, wid * .66, depth - 1, out, tips);
+}
+function tree(R, X, Z, season, h, depth, lean) {
+  const [bx, by] = P(X, 0, Z), k = F / Z, out = [], tips = [];
+  treeSVG(R, bx, by, h * k, lean, .38 * k, depth, out, tips);
+  let s = `<g stroke="#43382f" stroke-linecap="round" fill="none">${out.join("")}</g>`;
+  const LEAF = { spring: ["#b7d27e", "#a3c46a", "#c8de94"], summer: ["#4f7a35", "#5f8c3e", "#6e9a47", "#41692d"],
+                 autumn: ["#c9822e", "#e0b040", "#b8452a", "#d06a2a", "#a32f24", "#e8c25a"] }[season];
+  if (LEAF) {
+    const dens = { spring: .55, summer: 1, autumn: .9 }[season], size = { spring: .5, summer: 1.15, autumn: .9 }[season];
+    s += `<g>`;
+    tips.forEach(([x, y, inner]) => { if (R() > dens * (inner ? .6 : 1)) return;
+      // a small cluster of pointed leaves around each twig end
+      const n = 3 + Math.floor(R() * 4), sc = size * k / 70 * (.9 + R() * .5);
+      for (let i = 0; i < n; i++) {
+        const a = R() * 360, d = R() * 9 * sc;
+        s += `<use href="#leaf" fill="${pick(R, LEAF)}" transform="translate(${r1(x + Math.cos(a) * d)} ${r1(y + Math.sin(a) * d)}) rotate(${Math.round(a)}) scale(${(sc * (.8 + R() * .5)).toFixed(2)})"/>`;
+      } });
+    s += `</g>`;
+  }
+  return s;
+}
+
+function arborvitae(R, X, Z, h, w, snowy) {
+  const [bx, by] = P(X, 0, Z), [, ty] = P(X, h, Z), r = w * F / Z / 2, H = by - ty;
+  let s = `<ellipse cx="${r1(bx + r * .3)}" cy="${r1(by)}" rx="${r1(r * 1.2)}" ry="${r1(r * 1.2 * EYE / Z)}" fill="rgba(0,0,0,.28)"/>`;
+  s += `<path d="M${r1(bx - r * .8)} ${r1(by)}C${r1(bx - r * 1.2)} ${r1(by - H * .45)} ${r1(bx - r * .45)} ${r1(ty + H * .12)} ${r1(bx)} ${r1(ty)}` +
+       `C${r1(bx + r * .45)} ${r1(ty + H * .12)} ${r1(bx + r * 1.2)} ${r1(by - H * .45)} ${r1(bx + r * .8)} ${r1(by)}Z" fill="#2c5426"/>`;
+  for (let i = 0; i < 26; i++) {
+    const t = R() * .92, half = r * (t < .45 ? .95 : .95 * (1 - (t - .45) / .55)) * .8, side = R() * 2 - 1;
+    const cx = bx + side * half, cy = by - t * H, light = side > .2;
+    s += `<ellipse cx="${r1(cx)}" cy="${r1(cy)}" rx="${r1(r * (.18 + R() * .14))}" ry="${r1(r * (.12 + R() * .1))}" fill="${light ? pick(R, ["#3f7535", "#4a8240"]) : pick(R, ["#234620", "#2f5c29"])}"/>`;
+    if (snowy && R() < .5) s += `<ellipse cx="${r1(cx)}" cy="${r1(cy - r * .06)}" rx="${r1(r * .16)}" ry="${r1(r * .06)}" fill="#f2f4f6"/>`;
+  }
+  return s;
+}
+
+function buildScene(season, weather) {
+  const R = rng(20250624), winter = season === "winter";
+  WINDOWS = []; BULBS = [];
+  let s = `<defs>
+    <path id="leaf" d="M0 0C2 -3.2 7 -3.6 11 0C7 3.6 2 3.2 0 0Z"/>
+    <pattern id="siding" width="8" height="4.5" patternUnits="userSpaceOnUse"><rect width="8" height="1" fill="rgba(0,0,0,.09)"/></pattern>
+    <linearGradient id="turf" gradientUnits="userSpaceOnUse" x1="0" y1="660" x2="0" y2="1000">
+      <stop offset="0" stop-color="${winter ? "#dfe4e8" : "#6fa83c"}"/><stop offset="1" stop-color="${winter ? "#f5f7f8" : "#8cc449"}"/></linearGradient>
+    <linearGradient id="stripes" x1="0" x2="1" spreadMethod="repeat" gradientTransform="scale(.18 1)">
+      <stop offset="0" stop-color="#c9473c"/><stop offset=".33" stop-color="#c9473c"/><stop offset=".33" stop-color="#efe6d6"/>
+      <stop offset=".66" stop-color="#efe6d6"/><stop offset=".66" stop-color="#4f8a7c"/><stop offset="1" stop-color="#4f8a7c"/></linearGradient>
+  </defs>`;
+
+  // Row houses across the block
+  const ZH = 70;
+  const SIDING = ["#dcd8cf", "#8d9aa8", "#c5a37f", "#b98e6b", "#e4dfd6", "#a0aaa5", "#cdbb9f", "#9d7a62", "#d6cdbf"];
+  for (let X = -75; X < 75;) {
+    const w = 5 + R() * 1.8, h = 8.2 + R() * 2.2, c = pick(R, SIDING);
+    s += box(X, h, X + w, 0, ZH, c) + box(X, h, X + w, 0, ZH, "url(#siding)");
+    s += box(X - .1, h + .1, X + w + .1, h - .35, ZH, "rgba(40,34,30,.55)");
+    if (winter) s += box(X - .1, h + .2, X + w + .1, h + .05, ZH, "#f1f3f5");
+    if (R() < .5) { const cx = X + .6 + R() * (w - 1.6); s += box(cx, h + 1.3, cx + .7, h, ZH, pick(R, ["#8a5b48", "#7b6a5c", c])); }
+    const n = w > 5.8 ? 3 : 2, fe = R() < .5;
+    [3.6, 6.5].forEach((fy, fl) => {
+      for (let i = 0; i < n; i++) {
+        const wx = X + (w / n) * (i + .5) - .45;
+        s += box(wx - .08, fy + 1.58, wx + .98, fy - .08, ZH, "#efebe3") + box(wx, fy + 1.5, wx + .9, fy, ZH, "#58626d");
+        const [a, b] = P(wx, fy + 1.5, ZH), [c2, d] = P(wx + .9, fy, ZH);
+        WINDOWS.push([a, b, c2 - a, d - b]);
+      }
+      if (fe) {
+        const ex = X + w / 2 - 1.3;
+        s += box(ex, fy + .9, ex + 2.6, fy - .1, ZH, "none", `stroke="#1d1b1a" stroke-width="1.4"`);
+        s += line(P(ex, fy - .1, ZH), P(ex + 2.6, fy - .1, ZH), "#1d1b1a", 2.4);
+        if (fl === 0) s += line(P(ex + .4, fy - .1, ZH), P(ex + 2.2, fy + 2.8, ZH), "#1d1b1a", 1.6);
+      }
+    });
+    X += w;
+  }
+
+  // Utility poles and wires
+  [-17, -6.5, 6.8, 17].forEach(X => {
+    const Z = 24, k = F / Z;
+    for (const dx of [-.22, .22]) s += line(P(X + dx, 0, Z), P(X + dx, 16, Z), "#262321", r1(.09 * k));
+    for (let y = .4; y < 16; y += .7) s += line(P(X - .22, y, Z), P(X + .22, y, Z), "#262321", 1.4);
+    s += line(P(X - .8, 11.8, Z), P(X + .8, 11.8, Z), "#262321", 3);
+  });
+  for (let i = 0; i < 7; i++) {
+    const y1 = 120 + i * 26 + R() * 20, y2 = y1 + (R() - .5) * 60, sag = 20 + R() * 35;
+    s += `<path d="M-1400 ${r1(y1)}Q800 ${r1((y1 + y2) / 2 + sag * 2)} 3000 ${r1(y2)}" stroke="#1f1d1c" stroke-width="${i % 3 ? 1.1 : 1.8}" fill="none"/>`;
+  }
+
+  // Trees: the big one over the shed, plus a few further off
+  s += tree(rng(11), -15, 21, season, 1.9, 7, .1);
+  s += tree(rng(5), -8, 23, season, 2.0, 7, -.05);
+  s += tree(rng(3), 13, 25, season, 1.9, 7, .05);
+  s += tree(rng(42), 4.8, 17, season, 1.75, 8, -.08);
+
+  // Base ground behind everything
+  s += `<rect x="-1500" y="400" width="4600" height="700" fill="#5d5249"/>`;
+
+  // Neighbours' old fence and the shed, just behind ours
+  s += box(-40, 2.5, 2.3, 0, 13.6, "#7b6f63");
+  for (let X = -40; X < 2.3; X += .16) s += line(P(X, 2.5, 13.6), P(X, 0, 13.6), R() < .5 ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.07)", 1.3);
+  s += box(2.3, 2.5, 6.3, 0, 13.5, "#8a7156") + box(3.4, 2.1, 4.6, .4, 13.5, "#73604c");
+  s += poly([P(2.1, 2.95, 13.45), P(6.5, 2.65, 13.45), P(6.5, 2.42, 13.45), P(2.1, 2.72, 13.45)], winter ? "#eef0f2" : "#b5b6b1");
+  s += box(6.3, 2.3, 40, 0, 13.6, "#6f6458");
+  for (let X = 6.3; X < 40; X += .16) s += line(P(X, 2.3, 13.6), P(X, 0, 13.6), "rgba(0,0,0,.16)", 1.2);
+
+  // Neighbouring yards, either side of ours
+  s += ground(-40, -3.6, 2.5, 13, winter ? "#e8ebee" : "#8b877d") + ground(3.6, 40, 2.5, 13, winter ? "#e6e9ec" : "#7e7667");
+
+  // Our back fence, which runs along the whole block
+  s += box(-40, 1.9, 40, 0, 13, "#3a2f28");
+  for (let X = -40; X < 40; X += .13) s += line(P(X, 1.9, 13), P(X, 0, 13), R() < .6 ? "rgba(0,0,0,.28)" : "rgba(255,255,255,.05)", 1.2);
+  s += box(-40, 1.93, 40, 1.84, 13, winter ? "#f3f5f7" : "#2b231e");
+
+  // Beds, lawn, patio and the stepping-stone path
+  s += ground(-3.6, 3.6, 12.3, 13, winter ? "#e9ecef" : "#5b4434");
+  s += ground(2.6, 3.6, 2.5, 12.3, winter ? "#e9ecef" : "#5b4434");
+  s += ground(-3.6, 2.6, 2.5, 12.3, "url(#turf)");
+  s += ground(2.55, 2.66, 2.5, 12.3, winter ? "#dfe3e6" : "#7d7b77");
+  s += ground(-3.6, -.15, 10.3, 12.3, "#6f6b65");
+  for (let z = 10.33; z < 12.25; z += .66) for (let x = -3.57; x < -.2; x += .66)
+    s += ground(x, Math.min(x + .6, -.2), z, Math.min(z + .6, 12.27), winter ? "#eef0f2" : pick(R, ["#cbc7bf", "#c4c0b7", "#d0ccc4"]));
+  s += ground(-.42, .58, 2.5, 10.3, winter ? "#dde2e6" : "#77736b");
+  for (let z = 10.25; z > 2.5; z -= .66) s += ground(-.36, .52, z - .56, z, winter ? "#f0f2f4" : pick(R, ["#c9c5bd", "#c2beb5"]));
+
+  // Right-hand fence, between us and next door
+  s += poly([P(3.6, 0, 13), P(3.6, 1.9, 13), P(3.6, 1.9, 2.5), P(3.6, 0, 2.5)], "#2f2621");
+  for (let z = 2.5; z < 13; z += .13) s += line(P(3.6, 1.9, z), P(3.6, 0, z), "rgba(0,0,0,.3)", r1(1.2 * 9 / z));
+  if (winter) s += poly([P(3.6, 1.95, 13), P(3.6, 1.95, 2.5), P(3.6, 1.86, 2.5), P(3.6, 1.86, 13)], "#f3f5f7");
+  // Left-hand fence
+  s += poly([P(-3.6, 0, 13), P(-3.6, 1.9, 13), P(-3.6, 1.9, 2.5), P(-3.6, 0, 2.5)], "#2f2621");
+  for (let z = 2.5; z < 13; z += .13) s += line(P(-3.6, 1.9, z), P(-3.6, 0, z), "rgba(0,0,0,.3)", r1(1.2 * 9 / z));
+  if (winter) s += poly([P(-3.6, 1.95, 13), P(-3.6, 1.95, 2.5), P(-3.6, 1.86, 2.5), P(-3.6, 1.86, 13)], "#f3f5f7");
+
+  // Arborvitae along the back fence and down the right side
+  const ARBS = [[-3.15, 12.65, 2.1, .62], [-2.05, 12.65, 2.3, .66], [-.85, 12.65, 2.25, .6], [.4, 12.65, 2.4, .66],
+                [1.65, 12.65, 2.3, .62], [3.12, 12.2, 2.35, .7], [3.14, 10.7, 2.4, .72], [3.15, 9.2, 2.3, .7], [3.15, 7.7, 2.2, .68]];
+  ARBS.sort((a, b) => b[1] - a[1]).forEach(([X, Z, h, w]) => s += arborvitae(R, X, Z, h, w, winter));
+
+  // Spring flowers in the beds
+  if (season === "spring") {
+    const FL = ["#e8463c", "#f2c230", "#f39ab8", "#f6f1e6", "#8c5bc4", "#ef7a2c"];
+    const spots = [];
+    for (let i = 0; i < 70; i++) spots.push([-3.4 + R() * 6.8, 12.32 + R() * .25]);
+    for (let i = 0; i < 45; i++) spots.push([2.72 + R() * .25, 5.5 + R() * 6.7]);
+    spots.sort((a, b) => b[1] - a[1]).forEach(([X, Z]) => { const k = F / Z, ht = .18 + R() * .2, c = pick(R, FL);
+      s += line(P(X, 0, Z), P(X, ht, Z), "#4f7d36", r1(Math.max(.8, .012 * k)));
+      const [fx, fy] = P(X, ht, Z); s += `<ellipse cx="${r1(fx)}" cy="${r1(fy)}" rx="${r1(.035 * k)}" ry="${r1(.045 * k)}" fill="${c}"/>`; });
+  }
+  // Fallen leaves in autumn
+  if (season === "autumn") for (let i = 0; i < 60; i++) { const X = -3.4 + R() * 6, Z = 3 + R() * 9, k = F / Z, [x, y] = P(X, 0, Z);
+    s += `<ellipse cx="${r1(x)}" cy="${r1(y)}" rx="${r1(.05 * k)}" ry="${r1(.05 * k * EYE / Z + .5)}" fill="${pick(R, ["#c9822e", "#b8452a", "#e0b040"])}" opacity=".85"/>`; }
+
+  // Hammock on its stand (packed away in the cold months)
+  if (season === "spring" || season === "summer") {
+    const Z = 11.7, a = P(-3.3, 1.15, Z), b = P(-1.85, 1.15, Z), m1 = P(-2.6, .35, Z), m2 = P(-2.6, .5, Z);
+    s += line(P(-3.45, 0, Z), a, "#2a2a2a", 2.2) + line(P(-1.7, 0, Z), b, "#2a2a2a", 2.2) + line(P(-3.45, 0, Z), P(-1.7, 0, Z), "#2a2a2a", 2.2);
+    s += `<path d="M${r1(a[0])} ${r1(a[1])}Q${r1(m1[0])} ${r1(m1[1] + 18)} ${r1(b[0])} ${r1(b[1])}Q${r1(m2[0])} ${r1(m2[1] - 2)} ${r1(a[0])} ${r1(a[1])}Z" fill="url(#stripes)"/>`;
+  }
+
+  // Fire pit
+  { const Z = 11.3, X = -1.1, rim = circ(X, .42, Z, .42), b = circ(X, .2, Z, .3);
+    for (const [dx, dz] of [[-.3, -.1], [.3, -.1], [0, .25]]) s += line(P(X + dx * .8, .2, Z + dz * .8), P(X + dx, 0, Z + dz), "#2a1e17", 2);
+    // the bowl itself: a half-ellipse hanging below the rim
+    const [lx, ly] = P(X - .42, .42, Z), [rx2] = P(X + .42, .42, Z), [, by] = P(X, .14, Z);
+    const bowl = `M${r1(lx)} ${r1(ly)}A${r1((rx2 - lx) / 2)} ${r1(by - ly)} 0 0 0 ${r1(rx2)} ${r1(ly)}Z`;
+    s += `<path d="${bowl}" fill="#4d3122"/>`;
+    s += `<path d="M${r1(lx + (rx2 - lx) * .18)} ${r1(ly + (by - ly) * .35)}Q${r1((lx + rx2) / 2)} ${r1(ly + (by - ly) * .75)} ${r1(rx2 - (rx2 - lx) * .18)} ${r1(ly + (by - ly) * .35)}" stroke="rgba(255,255,255,.08)" stroke-width="1.5" fill="none"/>`;
+    s += poly(rim, "#7a4a30") + poly(circ(X, .42, Z, .36), winter ? "#e9ecef" : "#2a1d16");
+    const [cx, cy] = P(X, .42, Z); PIT = [cx, cy, .42 * F / Z, bowl]; }
+
+  // String lights across the yard (bulbs glow in the glow layer)
+  [[9.6, 3.0, 2.55], [12.2, 2.95, 2.6]].forEach(([Z, yEnd, yMid]) => {
+    const a = P(-3.6, yEnd, Z), b = P(3.6, yEnd, Z), m = P(0, yMid - (yEnd - yMid), Z);
+    s += `<path d="M${r1(a[0])} ${r1(a[1])}Q${r1(m[0])} ${r1(m[1])} ${r1(b[0])} ${r1(b[1])}" stroke="#262321" stroke-width="1.2" fill="none"/>`;
+    for (let t = .04; t < 1; t += .065) {
+      const x = (1 - t) ** 2 * a[0] + 2 * t * (1 - t) * m[0] + t * t * b[0], y = (1 - t) ** 2 * a[1] + 2 * t * (1 - t) * m[1] + t * t * b[1] + 4;
+      s += `<circle cx="${r1(x)}" cy="${r1(y)}" r="${r1(F / Z * .045)}" fill="#e8e1cf" opacity=".8"/>`;
+      BULBS.push([x, y, F / Z]);
+    }
+  });
+
+  // A few toys
+  s += `<g id="toys">`;
+  { const X = -3.15, Z = 9.6, k = F / Z;
+    s += poly(circ(X, 0, Z, .28), "#1e1d1d");
+    s += line(P(-3.42, 0, Z), P(-3.42, 1.2, Z), "#2c5fc4", r1(.075 * k));
+    s += poly([P(-3.38, 1.65, Z - .28), P(-3.38, 1.65, Z + .28), P(-3.38, 1.2, Z + .28), P(-3.38, 1.2, Z - .28)], "#f4f4f2");
+    const rim = circ(-3.18, 1.25, Z, .16);
+    rim.filter((_, i) => i % 3 === 0).forEach(p => s += line(p, [p[0] + (P(-3.18, 1, Z)[0] - p[0]) * .4, p[1] + .22 * k], "rgba(255,255,255,.75)", 1));
+    s += `<polygon points="${pts(rim)}" fill="none" stroke="#d9302f" stroke-width="${r1(.03 * k)}"/>`; }
+  { const Z = 7.9, X = .1, k = F / Z;
+    s += poly(circ(X, .07, Z, .32), "#3fb1c8") + line(P(X, .07, Z), P(X, .4, Z), "#e8504a", r1(.05 * k)) + poly(circ(X, .4, Z, .1), "#f2c230"); }
+  s += `<polygon points="${pts(circ(2.0, 0, 7, .17))}" fill="none" stroke="#e0322c" stroke-width="${r1(.035 * F / 7)}"/>`;
+  s += `</g>`;
+
+  // Snowman in winter
+  if (winter) { const Z = 8.6, k = F / Z; let y = 0;
+    [.34, .25, .17].forEach((r, i) => { const [x, cy] = P(1.9, y + r, Z);
+      s += `<circle cx="${r1(x)}" cy="${r1(cy)}" r="${r1(r * k)}" fill="${["#e9ecef", "#f0f2f4", "#f6f7f8"][i]}"/>`; y += r * 1.75; });
+    const [hx, hy] = P(1.9, y - .1, Z);
+    s += `<path d="M${r1(hx)} ${r1(hy)}l${r1(.16 * k)} ${r1(.02 * k)}l${r1(-.16 * k)} ${r1(.04 * k)}Z" fill="#e2762e"/>`;
+    const [ax, ay] = P(1.9, .78, Z);
+    s += line([ax - .2 * k, ay], [ax - .5 * k, ay - .2 * k], "#4a3a2c", 2) + line([ax + .2 * k, ay], [ax + .5 * k, ay - .25 * k], "#4a3a2c", 2); }
+
+  // Clouds go in their own layer so they can drift without repainting the scene
+  const nC = { clear: 6, cloudy: 16, rain: 18, snow: 14 }[weather] || 6;
+  const cFill = weather === "clear" ? "#ffffff" : weather === "cloudy" ? "#e4e7ea" : "#c4c9cf";
+  let c = "";
+  for (let i = 0; i < nC; i++) {
+    const x = -900 + R() * 3400, y = 40 + R() * 200, w = 90 + R() * 150;
+    c += `<g opacity="${weather === "clear" ? .92 : .85}" fill="${cFill}">`;
+    for (let j = 0; j < 6; j++) c += `<ellipse cx="${r1(x + (R() - .5) * w)}" cy="${r1(y + (R() - .5) * 18)}" rx="${r1(w * (.25 + R() * .25))}" ry="${r1(16 + R() * 18)}"/>`;
+    c += `</g>`;
+  }
+  $("clouds").innerHTML = c;
+  $("scene").innerHTML = s;
+}
+
+function buildGlow(phase, h, season, weather) {
+  let g = `<defs>
+    <radialGradient id="halo"><stop offset="0" stop-color="#ffd58a" stop-opacity=".6"/><stop offset="1" stop-color="#ffc46e" stop-opacity="0"/></radialGradient>
+    <radialGradient id="fire"><stop offset="0" stop-color="#ffb347" stop-opacity=".8"/><stop offset=".5" stop-color="#ff7a2a" stop-opacity=".25"/><stop offset="1" stop-color="#ff7a2a" stop-opacity="0"/></radialGradient>
+  </defs>`;
+  if (phase === "day") return g;
+  g += `<rect x="-2000" y="-500" width="6000" height="2000" fill="${PHASES[phase].wash}" style="mix-blend-mode:multiply"/>`;
+  const dark = phase === "night" || phase === "dusk";
+
+  if (phase === "night") {
+    const R = rng(99);
+    for (let i = 0; i < 70; i++) g += `<circle cx="${r1(-900 + R() * 3400)}" cy="${r1(R() * 230)}" r="${r1(.6 + R() * .9)}" fill="#fff" opacity="${r1(.3 + R() * .6)}"/>`;
+    g += `<circle cx="330" cy="110" r="20" fill="#f3ecd9"/><circle cx="341" cy="104" r="18" fill="#141b2c" opacity=".92"/>`;
+  }
+
+  // Lit windows across the block; which ones changes by the hour
+  const R = rng(1000 + Math.floor(h)), late = phase === "night" && (h >= 23 || h < 5);
+  const pLit = phase === "dawn" ? .15 : phase === "dusk" ? .4 : late ? .08 : .45;
+  const hidden = P(0, 2.5, 13.6)[1]; // the neighbours' fence hides anything lower than this
+  WINDOWS.forEach(([x, y, w, ht]) => { ht = Math.min(y + ht, hidden) - y; if (R() < pLit && ht > 0)
+    g += `<rect x="${r1(x)}" y="${r1(y)}" width="${r1(w)}" height="${r1(ht)}" fill="${pick(R, ["#ffd690", "#ffcb7a", "#f6e2b8"])}" opacity="${phase === "dawn" ? .6 : .9}"/>`; });
+
+  // String lights
+  if (dark) BULBS.forEach(([x, y, k], i) => {
+    g += `<g class="bulb" style="animation-delay:${(i % 7) * .45}s"><circle cx="${r1(x)}" cy="${r1(y)}" r="${r1(k * .2)}" fill="url(#halo)"/>` +
+         `<circle cx="${r1(x)}" cy="${r1(y)}" r="${r1(k * .05)}" fill="#fff1c9"/></g>`; });
+
+  // Fire pit, on cool evenings when it isn't raining
+  if (dark && !late && season !== "summer" && weather !== "rain" && PIT) {
+    const [cx, cy, rx, bowl] = PIT;
+    g += `<ellipse cx="${r1(cx)}" cy="${r1(cy)}" rx="${r1(rx * 3)}" ry="${r1(rx * 1.6)}" fill="url(#fire)"/>`;
+    g += `<path d="${bowl}" fill="#2e1a12"/>`; // the bowl stays dark in front of its own glow
+    [[-.35, .55, "#ff8a2b"], [.1, .8, "#ffb03b"], [.4, .5, "#ff7a24"], [0, .45, "#ffe08a"]].forEach(([dx, hh, c]) =>
+      g += `<path class="flame" style="animation-delay:${r1(Math.abs(dx))}s" d="M${r1(cx + dx * rx - rx * .2)} ${r1(cy)}Q${r1(cx + dx * rx)} ${r1(cy - rx * hh * 1.6)} ${r1(cx + dx * rx + rx * .2)} ${r1(cy)}Z" fill="${c}" opacity=".9"/>`);
+  }
+  return g;
+}
+
+// Fit the drawing to the window: show more width on wide screens, full height on tall ones.
+function fit() {
+  const r = $("win").getBoundingClientRect(), a = r.width / Math.max(r.height, 1);
+  let vh = 900, vw = vh * a, y0 = 100;
+  if (vw > 2000) { vw = 2000; vh = vw / a; y0 = 100 + (900 - vh) * .22; }
+  const cx = vw < 1200 ? 760 : CX;
+  const vb = `${r1(cx - vw / 2)} ${r1(y0)} ${r1(vw)} ${r1(vh)}`;
+  ["clouds", "scene", "glow"].forEach(id => $(id).setAttribute("viewBox", vb));
+}
+
+const q = new URLSearchParams(location.search);
+const $ = id => document.getElementById(id);
+let sceneKey = "", glowKey = "";
+
+// ---- Where the visitor is, roughly ----
+// The browser's time zone stands in for location: no permission prompt, city-level at best.
+const TZ_PLACES = {
+  "America/New_York": [40.7, -74], "America/Detroit": [42.3, -83], "America/Chicago": [41.9, -87.6], "America/Denver": [39.7, -105],
+  "America/Phoenix": [33.4, -112], "America/Los_Angeles": [34.1, -118.2], "America/Anchorage": [61.2, -149.9], "Pacific/Honolulu": [21.3, -157.9],
+  "America/Toronto": [43.7, -79.4], "America/Vancouver": [49.3, -123.1], "America/Edmonton": [53.5, -113.5], "America/Winnipeg": [49.9, -97.1],
+  "America/Halifax": [44.6, -63.6], "America/St_Johns": [47.6, -52.7], "America/Mexico_City": [19.4, -99.1], "America/Bogota": [4.7, -74.1],
+  "America/Lima": [-12, -77], "America/Santiago": [-33.4, -70.7], "America/Argentina/Buenos_Aires": [-34.6, -58.4], "America/Sao_Paulo": [-23.5, -46.6],
+  "Europe/London": [51.5, -.1], "Europe/Dublin": [53.3, -6.3], "Europe/Lisbon": [38.7, -9.1], "Europe/Madrid": [40.4, -3.7], "Europe/Paris": [48.9, 2.4],
+  "Europe/Brussels": [50.9, 4.4], "Europe/Amsterdam": [52.4, 4.9], "Europe/Berlin": [52.5, 13.4], "Europe/Zurich": [47.4, 8.5], "Europe/Rome": [41.9, 12.5],
+  "Europe/Vienna": [48.2, 16.4], "Europe/Prague": [50.1, 14.4], "Europe/Warsaw": [52.2, 21], "Europe/Stockholm": [59.3, 18.1], "Europe/Oslo": [59.9, 10.8],
+  "Europe/Copenhagen": [55.7, 12.6], "Europe/Helsinki": [60.2, 24.9], "Europe/Athens": [38, 23.7], "Europe/Istanbul": [41, 29], "Europe/Kyiv": [50.5, 30.5],
+  "Europe/Kiev": [50.5, 30.5], "Europe/Moscow": [55.8, 37.6], "Africa/Cairo": [30, 31.2], "Africa/Lagos": [6.5, 3.4], "Africa/Nairobi": [-1.3, 36.8],
+  "Africa/Johannesburg": [-26.2, 28], "Africa/Casablanca": [33.6, -7.6], "Asia/Dubai": [25.2, 55.3], "Asia/Jerusalem": [31.8, 35.2], "Asia/Karachi": [24.9, 67],
+  "Asia/Kolkata": [22.6, 88.4], "Asia/Calcutta": [22.6, 88.4], "Asia/Dhaka": [23.8, 90.4], "Asia/Bangkok": [13.8, 100.5], "Asia/Singapore": [1.4, 103.8],
+  "Asia/Jakarta": [-6.2, 106.8], "Asia/Shanghai": [31.2, 121.5], "Asia/Hong_Kong": [22.3, 114.2], "Asia/Taipei": [25, 121.5], "Asia/Manila": [14.6, 121],
+  "Asia/Seoul": [37.6, 127], "Asia/Tokyo": [35.7, 139.7], "Australia/Perth": [-32, 115.9], "Australia/Adelaide": [-34.9, 138.6],
+  "Australia/Brisbane": [-27.5, 153], "Australia/Sydney": [-33.9, 151.2], "Australia/Melbourne": [-37.8, 145], "Pacific/Auckland": [-36.9, 174.8]
+};
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+const SOUTH_TZ = /^(Australia|Antarctica)\/|^Pacific\/(Auckland|Chatham|Fiji|Tongatapu|Noumea|Efate)|^America\/(Argentina|Sao_Paulo|Santiago|Montevideo|Asuncion|Punta_Arenas)|^Africa\/(Johannesburg|Maputo|Harare|Windhoek|Gaborone|Maseru|Mbabane|Lusaka)|^Indian\/(Mauritius|Reunion|Antananarivo)/;
+// Unknown zone: guess longitude from the UTC offset and a mid latitude.
+const PLACE = TZ_PLACES[TZ] || [SOUTH_TZ.test(TZ) ? -33 : 40, -new Date().getTimezoneOffset() / 4];
+
+// Sunrise and sunset in local clock hours (standard approximation, good to a few minutes)
+function sunTimes(d, [lat, lon]) {
+  const n = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5), rad = Math.PI / 180;
+  const decl = 23.44 * Math.sin(2 * Math.PI * (284 + n) / 365) * rad, B = 2 * Math.PI * (n - 81) / 364;
+  const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+  const noon = 12 - lon / 15 - eot / 60 - d.getTimezoneOffset() / 60;
+  const c = (Math.sin(-.833 * rad) - Math.sin(lat * rad) * Math.sin(decl)) / (Math.cos(lat * rad) * Math.cos(decl));
+  const half = Math.acos(Math.max(-1, Math.min(1, c))) / rad / 15;
+  return [noon - half, noon + half];
+}
+
+// ---- Live weather from Open-Meteo (free, no key). The page never waits for it. ----
+let LIVE = null;
+const WX_KEY = "yard-weather";
+function wmo(code) {
+  if (code <= 1) return "clear";
+  if (code <= 48) return "cloudy";
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return "snow";
+  return "rain";
+}
+try { const c = JSON.parse(localStorage.getItem(WX_KEY)); if (c && Date.now() - c.t < 30 * 60e3) LIVE = c.w; } catch (e) {}
+async function fetchWeather() {
+  if (q.get("weather")) return;
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 2500);
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${PLACE[0]}&longitude=${PLACE[1]}&current=weather_code`;
+    const r = await fetch(url, { signal: ctl.signal });
+    const code = (await r.json()).current.weather_code;
+    if (typeof code !== "number") return;
+    LIVE = wmo(code);
+    try { localStorage.setItem(WX_KEY, JSON.stringify({ t: Date.now(), w: LIVE })); } catch (e) {}
+    render();
+  } catch (e) { /* blocked, offline or slow: keep the seasonal guess */ }
+  finally { clearTimeout(timer); }
+}
+
+function render() {
+  const now = new Date();
+  const qh = parseFloat(q.get("hour"));
+  const h = qh >= 0 && qh <= 23.99 ? qh : now.getHours() + now.getMinutes() / 60;
+  const [rise, set] = sunTimes(now, PLACE);
+  const phase = h >= rise - .75 && h < rise + .75 ? "dawn" : h >= rise + .75 && h < set - .5 ? "day"
+              : h >= set - .5 && h < set + .75 ? "dusk" : "night";
+  // Seasons follow the visitor's calendar, flipped south of the equator.
+  const m = (now.getMonth() + (PLACE[0] < 0 ? 6 : 0)) % 12;
+  const season = ["spring", "summer", "autumn", "winter"].includes(q.get("season")) ? q.get("season")
+               : (m <= 1 || m === 11) ? "winter" : m <= 4 ? "spring" : m <= 7 ? "summer" : "autumn";
+  const weather = q.get("weather") || LIVE || (season === "winter" ? "snow" : season === "spring" ? "rain" : "clear");
+
+  if (season + weather !== sceneKey) { sceneKey = season + weather; buildScene(season, weather); glowKey = ""; }
+  const gk = phase + Math.floor(h) + sceneKey;
+  if (gk === glowKey) return;
+  glowKey = gk;
+
+  const ph = PHASES[phase], s = document.documentElement.style;
+  const sky = weather === "clear" ? ph.sky : GREY_SKY[phase];
+  Object.entries({ sky, room: ph.room, sill: ph.sill, ink: ph.ink, soft: ph.soft, mullion: ph.mullion })
+        .forEach(([k, v]) => s.setProperty("--" + k, v));
+  const overcast = weather === "clear" || phase !== "day" ? "" : " brightness(.9) saturate(.8)";
+  $("scene").style.filter = ph.filter === "none" ? overcast.trim() || "none" : ph.filter;
+  $("clouds").style.filter = ph.filter;
+  $("glow").innerHTML = buildGlow(phase, h, season, weather);
+
+  // Opener line
+  const when = { dawn: "It's early", day: "It's the middle of the day", dusk: "The light's going", night: "It's late" }[phase];
+  const out = weather === "rain" ? "raining on the yard" : weather === "snow" ? "snowing on the yard"
+            : weather === "cloudy" ? "grey over the yard" : season === "winter" ? "cold and clear out there" : "clear out there";
+  const tail = phase === "night" ? "The lights are on for a while yet." : phase === "dusk" ? "The lights just came on." : "";
+  $("opener").textContent = `${when}, and it's ${out}. ${tail}`.trim();
+
+  // Rain / snow
+  let html = "";
+  if (weather === "rain" || weather === "snow") {
+    const rain = weather === "rain", n = rain ? 60 : 50;
+    for (let i = 0; i < n; i++) {
+      const dur = rain ? .8 + (i % 5) * .12 : 7 + (i % 6) * 1.1;
+      html += `<div class="p" style="left:${(i * 61.8) % 100}%;width:${rain ? 1 : 3 + (i % 3)}px;height:${rain ? 16 : 3 + (i % 3)}px;` +
+              `border-radius:${rain ? "1px" : "50%"};background:${rain ? "rgba(200,220,240,.55)" : "rgba(255,255,255,.9)"};` +
+              `animation:${rain ? "fall" : "drift"} ${dur}s linear ${-(i * 0.37) % dur}s infinite"></div>`;
+    }
+  }
+  $("particles").innerHTML = html;
+}
+
+// Writing links
+// Email is put together here so it never appears whole in the page source
+$("email").href = "mailto:" + ["zdkurtz", "gmail.com"].join("@");
+
+fit();
+render();
+addEventListener("resize", fit);
+setInterval(render, 30000);
+fetchWeather();
+setInterval(fetchWeather, 30 * 60e3);
+</script>
+</body>
+</html>
