@@ -407,44 +407,34 @@ const q = new URLSearchParams(location.search);
 const $ = id => document.getElementById(id);
 let sceneKey = "", glowKey = "";
 
-// ---- Where the visitor is, roughly ----
-// The browser's time zone stands in for location: no permission prompt, city-level at best.
-const TZ_PLACES = {
-  "America/New_York": [40.7, -74], "America/Detroit": [42.3, -83], "America/Chicago": [41.9, -87.6], "America/Denver": [39.7, -105],
-  "America/Phoenix": [33.4, -112], "America/Los_Angeles": [34.1, -118.2], "America/Anchorage": [61.2, -149.9], "Pacific/Honolulu": [21.3, -157.9],
-  "America/Toronto": [43.7, -79.4], "America/Vancouver": [49.3, -123.1], "America/Edmonton": [53.5, -113.5], "America/Winnipeg": [49.9, -97.1],
-  "America/Halifax": [44.6, -63.6], "America/St_Johns": [47.6, -52.7], "America/Mexico_City": [19.4, -99.1], "America/Bogota": [4.7, -74.1],
-  "America/Lima": [-12, -77], "America/Santiago": [-33.4, -70.7], "America/Argentina/Buenos_Aires": [-34.6, -58.4], "America/Sao_Paulo": [-23.5, -46.6],
-  "Europe/London": [51.5, -.1], "Europe/Dublin": [53.3, -6.3], "Europe/Lisbon": [38.7, -9.1], "Europe/Madrid": [40.4, -3.7], "Europe/Paris": [48.9, 2.4],
-  "Europe/Brussels": [50.9, 4.4], "Europe/Amsterdam": [52.4, 4.9], "Europe/Berlin": [52.5, 13.4], "Europe/Zurich": [47.4, 8.5], "Europe/Rome": [41.9, 12.5],
-  "Europe/Vienna": [48.2, 16.4], "Europe/Prague": [50.1, 14.4], "Europe/Warsaw": [52.2, 21], "Europe/Stockholm": [59.3, 18.1], "Europe/Oslo": [59.9, 10.8],
-  "Europe/Copenhagen": [55.7, 12.6], "Europe/Helsinki": [60.2, 24.9], "Europe/Athens": [38, 23.7], "Europe/Istanbul": [41, 29], "Europe/Kyiv": [50.5, 30.5],
-  "Europe/Kiev": [50.5, 30.5], "Europe/Moscow": [55.8, 37.6], "Africa/Cairo": [30, 31.2], "Africa/Lagos": [6.5, 3.4], "Africa/Nairobi": [-1.3, 36.8],
-  "Africa/Johannesburg": [-26.2, 28], "Africa/Casablanca": [33.6, -7.6], "Asia/Dubai": [25.2, 55.3], "Asia/Jerusalem": [31.8, 35.2], "Asia/Karachi": [24.9, 67],
-  "Asia/Kolkata": [22.6, 88.4], "Asia/Calcutta": [22.6, 88.4], "Asia/Dhaka": [23.8, 90.4], "Asia/Bangkok": [13.8, 100.5], "Asia/Singapore": [1.4, 103.8],
-  "Asia/Jakarta": [-6.2, 106.8], "Asia/Shanghai": [31.2, 121.5], "Asia/Hong_Kong": [22.3, 114.2], "Asia/Taipei": [25, 121.5], "Asia/Manila": [14.6, 121],
-  "Asia/Seoul": [37.6, 127], "Asia/Tokyo": [35.7, 139.7], "Australia/Perth": [-32, 115.9], "Australia/Adelaide": [-34.9, 138.6],
-  "Australia/Brisbane": [-27.5, 153], "Australia/Sydney": [-33.9, 151.2], "Australia/Melbourne": [-37.8, 145], "Pacific/Auckland": [-36.9, 174.8]
-};
-const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-const SOUTH_TZ = /^(Australia|Antarctica)\/|^Pacific\/(Auckland|Chatham|Fiji|Tongatapu|Noumea|Efate)|^America\/(Argentina|Sao_Paulo|Santiago|Montevideo|Asuncion|Punta_Arenas)|^Africa\/(Johannesburg|Maputo|Harare|Windhoek|Gaborone|Maseru|Mbabane|Lusaka)|^Indian\/(Mauritius|Reunion|Antananarivo)/;
-// Unknown zone: guess longitude from the UTC offset and a mid latitude.
-const PLACE = TZ_PLACES[TZ] || [SOUTH_TZ.test(TZ) ? -33 : 40, -new Date().getTimezoneOffset() / 4];
+// ---- The house: everything follows the time, sun and weather in Brooklyn ----
+// Rounded to central Brooklyn on purpose; good enough for sunrise, sunset and weather.
+const HOME = { lat: 40.65, lon: -73.95, tz: "America/New_York", stations: ["KJFK", "KLGA"] };
 
-// Sunrise and sunset in local clock hours (standard approximation, good to a few minutes)
-function sunTimes(d, [lat, lon]) {
-  const n = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5), rad = Math.PI / 180;
+// The current date and time at the house, whatever the visitor's own time zone
+function homeNow() {
+  const now = new Date(), p = {};
+  new Intl.DateTimeFormat("en-US", { timeZone: HOME.tz, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric" })
+    .formatToParts(now).forEach(x => p[x.type] = +x.value);
+  const asUTC = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute);
+  return { year: p.year, month: p.month - 1, day: p.day, hour: p.hour + p.minute / 60,
+           offset: Math.round((asUTC - now) / 9e5) / 4 };   // hours from UTC, e.g. -5 or -4
+}
+
+// Sunrise and sunset at the house, in its local clock hours (standard approximation, good to a few minutes)
+function sunTimes(t) {
+  const n = Math.round((Date.UTC(t.year, t.month, t.day) - Date.UTC(t.year, 0, 0)) / 864e5), rad = Math.PI / 180;
   const decl = 23.44 * Math.sin(2 * Math.PI * (284 + n) / 365) * rad, B = 2 * Math.PI * (n - 81) / 364;
   const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
-  const noon = 12 - lon / 15 - eot / 60 - d.getTimezoneOffset() / 60;
-  const c = (Math.sin(-.833 * rad) - Math.sin(lat * rad) * Math.sin(decl)) / (Math.cos(lat * rad) * Math.cos(decl));
+  const noon = 12 - HOME.lon / 15 - eot / 60 + t.offset;
+  const c = (Math.sin(-.833 * rad) - Math.sin(HOME.lat * rad) * Math.sin(decl)) / (Math.cos(HOME.lat * rad) * Math.cos(decl));
   const half = Math.acos(Math.max(-1, Math.min(1, c))) / rad / 15;
   return [noon - half, noon + half];
 }
 
-// ---- Live weather from Open-Meteo (free, no key). The page never waits for it. ----
+// ---- Live weather at the house. The page never waits for it. ----
 let LIVE = null;
-const WX_KEY = "yard-weather-2";
+const WX_KEY = "yard-weather-home";
 function wmo(code) {
   if (code <= 1) return "clear";
   if (code <= 48) return "cloudy";
@@ -452,11 +442,8 @@ function wmo(code) {
   return "rain";
 }
 try { const c = JSON.parse(localStorage.getItem(WX_KEY)); if (c && Date.now() - c.t < 15 * 60e3) LIVE = c.w; } catch (e) {}
-// In the US, real station readings from the National Weather Service: weather models
-// (Open-Meteo) often miss light rain that's actually falling. Elsewhere, and if the
-// station feed fails or is stale, fall back to Open-Meteo.
-const NWS_STATION = { "America/New_York": "KLGA", "America/Detroit": "KDTW", "America/Chicago": "KORD", "America/Denver": "KDEN",
-  "America/Phoenix": "KPHX", "America/Los_Angeles": "KLAX", "America/Anchorage": "PANC", "Pacific/Honolulu": "PHNL" };
+// Real readings from National Weather Service stations near the house (weather models
+// often miss light rain that's actually falling), with Open-Meteo as the last resort.
 function fromStation(p) {
   const t = (p.textDescription || "").toLowerCase(), mm = (p.precipitationLastHour || {}).value || 0;
   if (/snow|sleet|ice|flurr/.test(t)) return "snow";
@@ -472,13 +459,15 @@ async function getJSON(url, ms) {
 async function fetchWeather() {
   if (q.get("weather")) return;
   let w = null;
-  const station = NWS_STATION[TZ];
-  if (station) try {
-    const p = (await getJSON(`https://api.weather.gov/stations/${station}/observations/latest`, 2500)).properties;
-    if (Date.now() - new Date(p.timestamp) < 2 * 3600e3) w = fromStation(p);
-  } catch (e) {}
+  for (const station of HOME.stations) {
+    if (w) break;
+    try {
+      const p = (await getJSON(`https://api.weather.gov/stations/${station}/observations/latest`, 2500)).properties;
+      if (Date.now() - new Date(p.timestamp) < 2 * 3600e3) w = fromStation(p);
+    } catch (e) {}
+  }
   if (!w) try {
-    const c = (await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${PLACE[0]}&longitude=${PLACE[1]}&current=weather_code,precipitation`, 2500)).current;
+    const c = (await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${HOME.lat}&longitude=${HOME.lon}&current=weather_code,precipitation`, 2500)).current;
     if (typeof c.weather_code === "number") w = c.precipitation > 0 && wmo(c.weather_code) !== "snow" ? "rain" : wmo(c.weather_code);
   } catch (e) {}
   if (!w) return; // blocked, offline or slow: keep the seasonal guess
@@ -488,14 +477,13 @@ async function fetchWeather() {
 }
 
 function render() {
-  const now = new Date();
+  const t = homeNow();
   const qh = parseFloat(q.get("hour"));
-  const h = qh >= 0 && qh <= 23.99 ? qh : now.getHours() + now.getMinutes() / 60;
-  const [rise, set] = sunTimes(now, PLACE);
+  const h = qh >= 0 && qh <= 23.99 ? qh : t.hour;
+  const [rise, set] = sunTimes(t);
   const phase = h >= rise - .75 && h < rise + .75 ? "dawn" : h >= rise + .75 && h < set - .5 ? "day"
               : h >= set - .5 && h < set + .75 ? "dusk" : "night";
-  // Seasons follow the visitor's calendar, flipped south of the equator.
-  const m = (now.getMonth() + (PLACE[0] < 0 ? 6 : 0)) % 12;
+  const m = t.month;
   const season = ["spring", "summer", "autumn", "winter"].includes(q.get("season")) ? q.get("season")
                : (m <= 1 || m === 11) ? "winter" : m <= 4 ? "spring" : m <= 7 ? "summer" : "autumn";
   const weather = q.get("weather") || LIVE || (season === "winter" ? "snow" : season === "spring" ? "rain" : "clear");
@@ -513,7 +501,8 @@ function render() {
   $("glow").innerHTML = buildGlow(phase, h, season, weather);
 
   // Opener line
-  const when = { dawn: "It's early", day: "It's the middle of the day", dusk: "The light's going", night: "It's late" }[phase];
+  const when = { dawn: "It's early here", day: "It's the middle of the day here", dusk: "The light's going here",
+                 night: h >= 12 && h < 21 ? "It's dark here" : "It's late here" }[phase];
   const out = weather === "rain" ? "raining on the yard" : weather === "snow" ? "snowing on the yard"
             : weather === "cloudy" ? "grey over the yard" : season === "winter" ? "cold and clear out there" : "clear out there";
   const tail = phase === "night" ? "The lights are on for a while yet." : phase === "dusk" ? "The lights just came on." : "";
