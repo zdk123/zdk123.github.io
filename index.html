@@ -29,7 +29,6 @@
           transition: background 1.4s ease, color 1.4s ease; }
   .window { position: relative; overflow: hidden; background: var(--sky); transition: background 1.4s ease; }
   .layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: block; }
-  #scene, #clouds { transition: filter 1.4s ease; }
   #clouds { animation: clouds 160s ease-in-out infinite alternate; }
   .p { position: absolute; top: 0; }
   .bulb { animation: glow 3.4s ease-in-out infinite; }
@@ -83,13 +82,13 @@ const FRAME = "#231c17";
 
 const PHASES = {
   dawn:  { sky: "linear-gradient(180deg,#3d4a63,#8d7c86 45%,#d9a682 78%,#e8bf95)", room: "#e8e0d5", sill: "#e2d9cc", ink: "#2b241c", soft: "rgba(43,36,28,0.74)", mullion: FRAME,
-           filter: "brightness(.82) saturate(.85) sepia(.12)", wash: "#e8c9c4" },
+           light: [.85, .84, .81, .76], wash: "#e8c9c4" },
   day:   { sky: "linear-gradient(180deg,#3e7ccc,#6fa6e2 50%,#b4d2ee)", room: "#f1ece4", sill: "#eae3d8", ink: "#241e18", soft: "rgba(36,30,24,0.76)", mullion: FRAME,
-           filter: "none" },
+           light: null },
   dusk:  { sky: "linear-gradient(180deg,#2f3856,#6a5470 40%,#c07a5e 75%,#e0a06c)", room: "#3b322a", sill: "#332b24", ink: "#f4ece0", soft: "rgba(244,236,224,0.8)", mullion: FRAME,
-           filter: "brightness(.55) saturate(.75) sepia(.2)", wash: "#d6a9b4" },
+           light: [.75, .58, .54, .48], wash: "#d6a9b4" },
   night: { sky: "linear-gradient(180deg,#0b0f1c,#141b2c 55%,#1d2436)", room: "#1b1611", sill: "#17120e", ink: "#efe4d4", soft: "rgba(239,228,212,0.78)", mullion: FRAME,
-           filter: "brightness(.34) saturate(.5)", wash: "#7f93c8" }
+           light: [.5, .34, .34, .34], wash: "#7f93c8" }
 };
 const GREY_SKY = { dawn: "linear-gradient(180deg,#5d6270,#9a9498)", day: "linear-gradient(180deg,#8e99a5,#b9c1c9 60%,#cdd3d8)",
                    dusk: "linear-gradient(180deg,#363a4a,#6a6170)", night: "linear-gradient(180deg,#121520,#1c2130)" };
@@ -156,6 +155,18 @@ function arborvitae(R, X, Z, h, w, snowy) {
     if (snowy && R() < .5) s += `<ellipse cx="${r1(cx)}" cy="${r1(cy - r * .06)}" rx="${r1(r * .16)}" ry="${r1(r * .06)}" fill="#f2f4f6"/>`;
   }
   return s;
+}
+
+// Time-of-day lighting as an SVG filter (CSS filters on <svg> are ignored by Safari on iOS)
+const lightFilter = id => `<filter id="${id}" filterUnits="userSpaceOnUse" x="-2000" y="-1000" width="6000" height="3000" color-interpolation-filters="sRGB">
+  <feColorMatrix type="saturate" values="1"/><feComponentTransfer>
+  <feFuncR type="linear" slope="1"/><feFuncG type="linear" slope="1"/><feFuncB type="linear" slope="1"/></feComponentTransfer></filter>`;
+function setLight(svg, id, light) {
+  const g = svg.querySelector("g[id^=lit]"), f = svg.querySelector("#" + id);
+  if (!light) { g.removeAttribute("filter"); return; }
+  f.querySelector("feColorMatrix").setAttribute("values", light[0]);
+  ["R", "G", "B"].forEach((c, i) => f.querySelector("feFunc" + c).setAttribute("slope", light[i + 1]));
+  g.setAttribute("filter", `url(#${id})`);
 }
 
 function buildScene(season, weather) {
@@ -336,8 +347,8 @@ function buildScene(season, weather) {
     for (let j = 0; j < 6; j++) c += `<ellipse cx="${r1(x + (R() - .5) * w)}" cy="${r1(y + (R() - .5) * 18)}" rx="${r1(w * (.25 + R() * .25))}" ry="${r1(16 + R() * 18)}"/>`;
     c += `</g>`;
   }
-  $("clouds").innerHTML = c;
-  $("scene").innerHTML = s;
+  $("clouds").innerHTML = lightFilter("lightC") + `<g id="litC">${c}</g>`;
+  $("scene").innerHTML = lightFilter("lightS") + `<g id="litS">${s}</g>`;
 }
 
 function buildGlow(phase, h, season, weather) {
@@ -474,9 +485,9 @@ function render() {
   const sky = weather === "clear" ? ph.sky : GREY_SKY[phase];
   Object.entries({ sky, room: ph.room, sill: ph.sill, ink: ph.ink, soft: ph.soft, mullion: ph.mullion })
         .forEach(([k, v]) => s.setProperty("--" + k, v));
-  const overcast = weather === "clear" || phase !== "day" ? "" : " brightness(.9) saturate(.8)";
-  $("scene").style.filter = ph.filter === "none" ? overcast.trim() || "none" : ph.filter;
-  $("clouds").style.filter = ph.filter;
+  const light = ph.light || (weather === "clear" ? null : [.8, .9, .9, .9]);
+  setLight($("scene"), "lightS", light);
+  setLight($("clouds"), "lightC", ph.light);
   $("glow").innerHTML = buildGlow(phase, h, season, weather);
 
   // Opener line
