@@ -444,27 +444,47 @@ function sunTimes(d, [lat, lon]) {
 
 // ---- Live weather from Open-Meteo (free, no key). The page never waits for it. ----
 let LIVE = null;
-const WX_KEY = "yard-weather";
+const WX_KEY = "yard-weather-2";
 function wmo(code) {
   if (code <= 1) return "clear";
   if (code <= 48) return "cloudy";
   if ((code >= 71 && code <= 77) || code === 85 || code === 86) return "snow";
   return "rain";
 }
-try { const c = JSON.parse(localStorage.getItem(WX_KEY)); if (c && Date.now() - c.t < 30 * 60e3) LIVE = c.w; } catch (e) {}
+try { const c = JSON.parse(localStorage.getItem(WX_KEY)); if (c && Date.now() - c.t < 15 * 60e3) LIVE = c.w; } catch (e) {}
+// In the US, real station readings from the National Weather Service: weather models
+// (Open-Meteo) often miss light rain that's actually falling. Elsewhere, and if the
+// station feed fails or is stale, fall back to Open-Meteo.
+const NWS_STATION = { "America/New_York": "KLGA", "America/Detroit": "KDTW", "America/Chicago": "KORD", "America/Denver": "KDEN",
+  "America/Phoenix": "KPHX", "America/Los_Angeles": "KLAX", "America/Anchorage": "PANC", "Pacific/Honolulu": "PHNL" };
+function fromStation(p) {
+  const t = (p.textDescription || "").toLowerCase(), mm = (p.precipitationLastHour || {}).value || 0;
+  if (/snow|sleet|ice|flurr/.test(t)) return "snow";
+  if (/rain|drizzle|shower|thunder/.test(t) || mm >= .3) return "rain";
+  if (/overcast|cloudy|fog|mist|haze/.test(t) && !/partly/.test(t)) return "cloudy";
+  return t ? "clear" : null;
+}
+async function getJSON(url, ms) {
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms);
+  try { const r = await fetch(url, { signal: ctl.signal }); if (!r.ok) throw r.status; return await r.json(); }
+  finally { clearTimeout(timer); }
+}
 async function fetchWeather() {
   if (q.get("weather")) return;
-  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 2500);
-  try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${PLACE[0]}&longitude=${PLACE[1]}&current=weather_code`;
-    const r = await fetch(url, { signal: ctl.signal });
-    const code = (await r.json()).current.weather_code;
-    if (typeof code !== "number") return;
-    LIVE = wmo(code);
-    try { localStorage.setItem(WX_KEY, JSON.stringify({ t: Date.now(), w: LIVE })); } catch (e) {}
-    render();
-  } catch (e) { /* blocked, offline or slow: keep the seasonal guess */ }
-  finally { clearTimeout(timer); }
+  let w = null;
+  const station = NWS_STATION[TZ];
+  if (station) try {
+    const p = (await getJSON(`https://api.weather.gov/stations/${station}/observations/latest`, 2500)).properties;
+    if (Date.now() - new Date(p.timestamp) < 2 * 3600e3) w = fromStation(p);
+  } catch (e) {}
+  if (!w) try {
+    const c = (await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${PLACE[0]}&longitude=${PLACE[1]}&current=weather_code,precipitation`, 2500)).current;
+    if (typeof c.weather_code === "number") w = c.precipitation > 0 && wmo(c.weather_code) !== "snow" ? "rain" : wmo(c.weather_code);
+  } catch (e) {}
+  if (!w) return; // blocked, offline or slow: keep the seasonal guess
+  LIVE = w;
+  try { localStorage.setItem(WX_KEY, JSON.stringify({ t: Date.now(), w })); } catch (e) {}
+  render();
 }
 
 function render() {
@@ -522,7 +542,7 @@ render();
 addEventListener("resize", fit);
 setInterval(render, 30000);
 fetchWeather();
-setInterval(fetchWeather, 30 * 60e3);
+setInterval(fetchWeather, 15 * 60e3);
 </script>
 </body>
 </html>

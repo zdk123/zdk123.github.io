@@ -6,7 +6,7 @@ A single-page personal website for GitHub Pages (`zdk123.github.io`). No build s
 The top of the page is a window looking out on a backyard: a stylized SVG drawing of the owner's real yard (dark board fence, arborvitae, turf, stepping-stone path, patio with fire pit and hammock, string lights, row houses and utility poles behind). It is drawn from reference photos, which are kept out of the repo for privacy. Don't add details that would identify the location. The bottom is a windowsill with a few lines of first-person text. The scene follows the visitor's local clock:
 - **Phase**: from real sunrise/sunset, computed for a rough location guessed from the visitor's time zone (`TZ_PLACES`, falling back to the UTC offset). Dawn is sunrise ±45 min, dusk is sunset −30/+45 min. This sets the sky, the room colours and the ink colour. String lights come on at dusk and night.
 - **Season** (from the month, shifted six months for southern-hemisphere visitors): Dec–Feb winter, Mar–May spring, Jun–Aug summer, Sep–Nov autumn.
-- **Weather**: live from Open-Meteo (no key) for the same rough location, fetched after first paint with a 2.5 s timeout and cached in localStorage for 30 min. If blocked or slow, it falls back to snow in winter, rain in spring, clear otherwise.
+- **Weather**: in US time zones, the latest real observation from a National Weather Service station (`NWS_STATION`, e.g. KLGA for New York). Elsewhere, or if that fails or is over 2 h old, Open-Meteo (a model, which can miss light rain). Fetched after first paint, 2.5 s timeout per request, cached in localStorage for 15 min. If blocked or slow, it falls back to snow in winter, rain in spring, clear otherwise.
 - The idea: the visitor sees the owner's yard as if it were where *they* are, at their time of day, season and weather.
 - The opening sentence is generated from phase, season and weather.
 - The page re-checks every 30 seconds.
@@ -35,5 +35,5 @@ To preview other conditions, use URL overrides: `?hour=21&weather=snow&season=wi
 
 ## Constraints
 - Keep it a single static file: no frameworks, no bundler.
-- External resources: the Newsreader font from Google Fonts, and the Open-Meteo weather request.
+- External resources: the Newsreader font from Google Fonts, and the weather requests (api.weather.gov, Open-Meteo).
 - Keep the quiet, plain tone of the copy: first person, no pitch.
