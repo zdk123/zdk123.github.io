@@ -23,6 +23,11 @@ To preview other conditions, use URL overrides: `?hour=21&weather=snow&season=wi
 - `fit()`: sets the shared viewBox so wide screens see more width and tall screens see full height.
 - `render()`: works out phase, season and weather, then updates the variables, the opener line and the rain or snow particles.
 
+## Writing
+- Each post is a self-contained page at `posts/<slug>/index.html` (its own styles, images inlined as data URIs). The byline reads "Zachary D. Kurtz" and links back to `/`.
+- `feed.xml` (RSS) lists the posts, newest first. The homepage fetches it and shows the first `<item>` as "My latest writing: …" in the sill (hidden if the fetch fails).
+- To publish a post: add its folder, then add an `<item>` at the top of `feed.xml`. Nothing else to edit.
+
 ## Content
 - Name in `<title>` and the meta/OG tags: Zachary D. Kurtz.
 - Email is assembled in script (`$("email").href = ...`) so it is never whole in the page source. Keep it that way.
@@ -35,6 +40,6 @@ To preview other conditions, use URL overrides: `?hour=21&weather=snow&season=wi
 4. The site is live at https://zdk123.github.io within about a minute.
 
 ## Constraints
-- Keep it a single static file: no frameworks, no bundler.
+- Keep it static: no frameworks, no bundler. The homepage is a single file; posts are separate static pages.
 - External resources: the Newsreader font from Google Fonts, and the weather requests (api.weather.gov, Open-Meteo).
 - Keep the quiet, plain tone of the copy: first person, no pitch.

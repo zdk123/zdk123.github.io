@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>Zachary D. Kurtz</title>
+  <link>https://zdk123.github.io/</link>
+  <description>Writing by Zachary D. Kurtz.</description>
+  <language>en</language>
+  <atom:link href="https://zdk123.github.io/feed.xml" rel="self" type="application/rss+xml"/>
+  <!-- Newest post first. The homepage shows the first <item> as "latest writing". -->
+  <item>
+    <title>Fooling the next AI agent</title>
+    <link>https://zdk123.github.io/posts/fooling-the-next-agent/</link>
+    <guid>https://zdk123.github.io/posts/fooling-the-next-agent/</guid>
+    <pubDate>Fri, 20 Nov 2026 12:00:00 -0500</pubDate>
+    <description>Fooling the next AI agent only takes a summary of the significant results.</description>
+  </item>
+</channel>
+</rss>
