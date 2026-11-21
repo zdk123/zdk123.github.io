@@ -29,7 +29,7 @@
   .room { font-family: 'Newsreader', Georgia, serif; min-height: 100vh; min-height: 100svh;
           display: grid; grid-template-rows: minmax(52vh, 1fr) auto; background: var(--room); color: var(--ink);
           transition: background 1.4s ease, color 1.4s ease; }
-  .window { position: relative; overflow: hidden; background: var(--sky); transition: background 1.4s ease; }
+  .window { position: relative; overflow: hidden; min-height: calc(100vw / 2.9); background: var(--sky); transition: background 1.4s ease; }
   .layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: block; }
   #clouds { animation: clouds 160s ease-in-out infinite alternate; }
   .p { position: absolute; top: 0; }
@@ -482,7 +482,8 @@ function buildGlow(phase, h, season, weather) {
 function fit() {
   const r = $("win").getBoundingClientRect(), a = r.width / Math.max(r.height, 1);
   let vh = 900, vw = vh * a, y0 = 100;
-  if (vw > 2000) { vw = 2000; vh = vw / a; y0 = 100 + (900 - vh) * .22; }
+  // The drawing reaches about 2700 wide; past that, crop the sky rather than the front of the yard
+  if (vw > 2700) { vw = 2700; vh = vw / a; y0 = 100 + (900 - vh) * .5; }
   const cx = vw < 1200 ? 760 : CX;
   const vb = `${r1(cx - vw / 2)} ${r1(y0)} ${r1(vw)} ${r1(vh)}`;
   ["clouds", "scene", "glow"].forEach(id => $(id).setAttribute("viewBox", vb));
