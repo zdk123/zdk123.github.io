@@ -23,6 +23,7 @@
   @keyframes glow   { 0%,100% { opacity: .82; } 50% { opacity: 1; } }
   @keyframes flick  { 0%,100% { opacity: .85; transform: scaleY(1); } 30% { opacity: 1; transform: scaleY(1.12); } 60% { opacity: .75; transform: scaleY(.92); } }
   @keyframes clouds { from { transform: translateX(-3%); } to { transform: translateX(3%); } }
+  @keyframes sway   { from { transform: skewX(-22deg); } to { transform: skewX(22deg); } }
   @keyframes fade   { from { opacity: 0; } to { opacity: 1; } }
 
   .room { font-family: 'Newsreader', Georgia, serif; min-height: 100vh; min-height: 100svh;
@@ -33,6 +34,7 @@
   #clouds { animation: clouds 160s ease-in-out infinite alternate; }
   .p { position: absolute; top: 0; }
   .bulb { animation: glow 3.4s ease-in-out infinite; }
+  .spray { transform-box: fill-box; transform-origin: 50% 100%; animation: sway 3.2s ease-in-out infinite alternate; }
   .flame { transform-box: fill-box; transform-origin: 50% 100%; animation: flick 1.3s ease-in-out infinite; }
   .mullion { background: linear-gradient(90deg, transparent calc(50% - 7px), rgba(255,255,255,.14) calc(50% - 7px), var(--mullion) calc(50% - 6px), var(--mullion) calc(50% + 6px), rgba(0,0,0,.4) calc(50% + 6px), rgba(0,0,0,.4) calc(50% + 7px), transparent calc(50% + 7px)); }
   .vignette { box-shadow: inset 0 0 90px 30px rgba(0,0,0,.22); }
@@ -46,7 +48,7 @@
   .text a:hover, .text a:focus-visible { border-bottom-color: var(--ink); }
 
   @media (prefers-reduced-motion: reduce) {
-    #clouds, .bulb, .flame, .p, .text { animation: none !important; }
+    #clouds, .bulb, .flame, .spray, .p, .text { animation: none !important; }
     #particles { display: none; }
   }
 </style>
@@ -176,8 +178,90 @@ function applyLight(svg, light) {
     .replace(/rgba\((\d+),\s*(\d+),\s*(\d+),/g, (_, r, g, b) => `rgba(${shade(+r, +g, +b, light).join(",")},`);
 }
 
-function buildScene(season, weather, light, cloudLight) {
-  const R = rng(20250624), winter = season === "winter";
+// A ball lying on the ground. snow: 0 none, 1 snow on the ground, 2 snowing today (half buried)
+const BALLS = { big: [.12, "#d8692a"], small: [.085, "#e3803a"], soccer: [.11, "#f4f3ee"], base: [.037, "#f3efe4"] };
+function ball(kind, X, Z, rot, snow) {
+  const [r, fill] = BALLS[kind], k = F / Z, Rp = r * k, [x, y] = P(X, r, Z), [, gy] = P(X, 0, Z), w = r1(Math.max(.6, Rp * .07));
+  let s = snow ? "" : `<ellipse cx="${r1(x + Rp * .3)}" cy="${r1(gy)}" rx="${r1(Rp * 1.1)}" ry="${r1(Rp * .32)}" fill="rgba(0,0,0,.25)"/>`;
+  s += `<circle cx="${r1(x)}" cy="${r1(y)}" r="${r1(Rp)}" fill="${fill}"${kind === "soccer" || kind === "base" ? ` stroke="rgba(0,0,0,.25)" stroke-width="${w}"` : ""}/>`;
+  let d = "";
+  const M = (dx, dy) => `${r1(x + dx * Rp)} ${r1(y + dy * Rp)}`;
+  if (kind === "big" || kind === "small")
+    d = `<path d="M${M(-1, 0)}Q${M(0, .28)} ${M(1, 0)}M${M(0, -1)}Q${M(.3, 0)} ${M(0, 1)}M${M(-.72, -.7)}Q${M(-.2, 0)} ${M(-.72, .7)}M${M(.72, -.7)}Q${M(.25, 0)} ${M(.72, .7)}" stroke="#2a1a12" stroke-width="${w}" fill="none"/>`;
+  else if (kind === "soccer") {
+    const pent = (cx, cy, rr) => `<polygon points="${[0, 1, 2, 3, 4].map(i => { const a = i * 1.2566 - 1.5708; return r1(x + (cx + Math.cos(a) * rr) * Rp) + "," + r1(y + (cy + Math.sin(a) * rr) * Rp); }).join(" ")}" fill="#232323"/>`;
+    d = pent(0, 0, .3) + [0, 1, 2, 3, 4].map(i => { const a = i * 1.2566 + 1.5708; return pent(Math.cos(a) * .72, Math.sin(a) * .72, .17); }).join("");
+  } else
+    d = `<path d="M${M(-.62, -.75)}Q${M(-.12, 0)} ${M(-.62, .75)}M${M(.62, -.75)}Q${M(.12, 0)} ${M(.62, .75)}" stroke="#c8352e" stroke-width="${r1(Math.max(.5, Rp * .1))}" fill="none"/>`;
+  s += `<g transform="rotate(${Math.round(rot)} ${r1(x)} ${r1(y)})">${d}</g>`;
+  s += `<circle cx="${r1(x)}" cy="${r1(y)}" r="${r1(Rp)}" fill="url(#ballshade)"/>`;
+  if (snow) {
+    const sink = snow === 2 ? .62 : .3;
+    const t = Math.max(0, Math.min(1, (gy - 660) / 340)), mix = (a, b) => Math.round(a + (b - a) * t).toString(16).padStart(2, "0");
+    s += `<ellipse cx="${r1(x)}" cy="${r1(gy)}" rx="${r1(Rp * 1.4)}" ry="${r1(Rp * 2 * sink)}" fill="#${mix(0xdf, 0xf5)}${mix(0xe4, 0xf7)}${mix(0xe8, 0xf8)}"/>`;
+    s += `<ellipse cx="${r1(x)}" cy="${r1(y - Rp * .72)}" rx="${r1(Rp * .64)}" ry="${r1(Rp * .3)}" fill="#f6f7f8"/>`;
+  }
+  return s;
+}
+
+// What the kids left out today: a different handful of balls in different places each day
+// (the same all day long), and the hose and sprinkler in summer.
+function dailyClutter(seed, season, weather, phase, snowman) {
+  const D = rng(seed), winter = season === "winter", snow = winter ? (weather === "snow" ? 2 : 1) : 0;
+  // Places already taken: hoop, fire pit, and the snowman when there is one
+  const taken = [[-3.15, 9.6, .5], [-1.1, 11.3, .75]];
+  if (snowman) taken.push([1.9, 8.6, .55]);
+  const spot = (r, zMin = 4.1) => { for (let i = 0; i < 50; i++) {
+    const patio = D() < .18, X = patio ? -3.3 + D() * 3 : -3.3 + D() * 5.4, Z = patio ? 10.5 + D() * .9 : zMin + D() * (10.1 - zMin);
+    if (taken.every(([x, z, rr]) => Math.hypot(X - x, Z - z) > rr + r)) { taken.push([X, Z, r]); return [X, Z]; } } return null; };
+  const items = [];
+
+  if (season === "summer") {
+    // Every roll happens whatever the hour, so nothing moves when the light changes
+    const sp = spot(.6, 5), X0 = -1.5 + D() * 3, wig = .3 + D() * .5, ph = D() * 6, on = D() < .7;
+    if (sp) {
+      const [X, Z] = sp, k = F / Z;
+      // The hose comes in from the house, behind the window, and wanders over to the sprinkler
+      const Z0 = 3.2;
+      const hose = Array.from({ length: 41 }, (_, i) => { const t = i / 40;
+        return P(X0 + (X - X0) * t + Math.sin(t * 9 + ph) * wig * Math.sin(t * Math.PI), 0, Z0 + (Z - Z0) * t); });
+      let s = `<polyline points="${pts(hose)}" fill="none" stroke="#2f7d3a" stroke-width="${r1(.03 * F / ((Z0 + Z) / 2))}" stroke-linejoin="round" stroke-linecap="round"/>`;
+      s += poly([P(X - .22, 0, Z - .07), P(X + .22, 0, Z - .07), P(X + .22, 0, Z + .07), P(X - .22, 0, Z + .07)], "#e9b92a");
+      s += box(X - .2, .07, X + .2, 0, Z, "#f2c230") + line(P(X - .18, .09, Z), P(X + .18, .09, Z), "#5b6670", r1(Math.max(1, .025 * k)));
+      // Water, on summer days when it isn't raining anyway
+      if (phase === "day" && weather !== "rain" && on) {
+        let w = "";
+        for (let i = -3; i <= 3; i++) { const a = P(X + i * .05, .1, Z), b = P(X + i * .28, 0, Z), m = P(X + i * .16, 1.3, Z);
+          w += `<path d="M${r1(a[0])} ${r1(a[1])}Q${r1(m[0])} ${r1(m[1])} ${r1(b[0])} ${r1(b[1])}" stroke="rgba(225,242,255,.6)" stroke-width="1.4" fill="none" stroke-dasharray="1.5 4" stroke-linecap="round"/>`; }
+        s += `<g class="spray">${w}</g>`;
+      }
+      items.push([Z, s]);
+    }
+  }
+
+  // The sit-and-spin is out most days, somewhere new each time
+  { const sp = spot(.45, 5), out = D() < .7;
+    if (sp && out) { const [X, Z] = sp, k = F / Z;
+      items.push([Z, poly(circ(X, .07, Z, .32), "#3fb1c8") + line(P(X, .07, Z), P(X, .4, Z), "#e8504a", r1(.05 * k)) +
+        poly(circ(X, .4, Z, .1), "#f2c230") + (snow === 2 ? poly(circ(X, .07, Z, .26), "#eef1f3") + poly(circ(X, .41, Z, .08), "#f6f7f8") : "")]); } }
+
+  // So is the ring frisbee, unless fresh snow has covered it
+  { const sp = spot(.25), out = D() < .6;
+    if (sp && out && snow < 2) { const [X, Z] = sp;
+      items.push([Z, `<polygon points="${pts(circ(X, 0, Z, .17))}" fill="none" stroke="#e0322c" stroke-width="${r1(.035 * F / Z)}"/>`]); } }
+
+  // A different few balls each day; fewer in winter, and the baseballs vanish under fresh snow
+  const pool = ["big", "small", "soccer", "base", "base", "base"];
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(D() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const n = winter ? 1 + Math.floor(D() * 3) : 2 + Math.floor(D() * 4);
+  pool.slice(0, n).forEach(kind => { const sp = spot(.3), rot = D() * 360;
+    if (sp && !(kind === "base" && snow === 2)) items.push([sp[1], ball(kind, sp[0], sp[1], rot, snow)]); });
+
+  return items.sort((a, b) => b[0] - a[0]).map(i => i[1]).join("");
+}
+
+function buildScene(season, weather, light, cloudLight, phase, daySeed) {
+  const R = rng(20250624), winter = season === "winter", snowman = winter && weather === "snow";
   WINDOWS = []; BULBS = [];
   let s = `<defs>
     <path id="leaf" d="M0 0C2 -3.2 7 -3.6 11 0C7 3.6 2 3.2 0 0Z"/>
@@ -187,6 +271,7 @@ function buildScene(season, weather, light, cloudLight) {
     <linearGradient id="stripes" x1="0" x2="1" spreadMethod="repeat" gradientTransform="scale(.18 1)">
       <stop offset="0" stop-color="#c9473c"/><stop offset=".33" stop-color="#c9473c"/><stop offset=".33" stop-color="#efe6d6"/>
       <stop offset=".66" stop-color="#efe6d6"/><stop offset=".66" stop-color="#4f8a7c"/><stop offset="1" stop-color="#4f8a7c"/></linearGradient>
+    <radialGradient id="ballshade" cx=".38" cy=".32" r=".72"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></radialGradient>
   </defs>`;
 
   // Row houses across the block
@@ -330,13 +415,11 @@ function buildScene(season, weather, light, cloudLight) {
     const rim = circ(-3.18, 1.25, Z, .16);
     rim.filter((_, i) => i % 3 === 0).forEach(p => s += line(p, [p[0] + (P(-3.18, 1, Z)[0] - p[0]) * .4, p[1] + .22 * k], "rgba(255,255,255,.75)", 1));
     s += `<polygon points="${pts(rim)}" fill="none" stroke="#d9302f" stroke-width="${r1(.03 * k)}"/>`; }
-  { const Z = 7.9, X = .1, k = F / Z;
-    s += poly(circ(X, .07, Z, .32), "#3fb1c8") + line(P(X, .07, Z), P(X, .4, Z), "#e8504a", r1(.05 * k)) + poly(circ(X, .4, Z, .1), "#f2c230"); }
-  s += `<polygon points="${pts(circ(2.0, 0, 7, .17))}" fill="none" stroke="#e0322c" stroke-width="${r1(.035 * F / 7)}"/>`;
   s += `</g>`;
+  s += dailyClutter(daySeed, season, weather, phase, snowman);
 
-  // Snowman in winter
-  if (winter) { const Z = 8.6, k = F / Z; let y = 0;
+  // Snowman, on winter days when it's snowing
+  if (snowman) { const Z = 8.6, k = F / Z; let y = 0;
     [.34, .25, .17].forEach((r, i) => { const [x, cy] = P(1.9, y + r, Z);
       s += `<circle cx="${r1(x)}" cy="${r1(cy)}" r="${r1(r * k)}" fill="${["#e9ecef", "#f0f2f4", "#f6f7f8"][i]}"/>`; y += r * 1.75; });
     const [hx, hy] = P(1.9, y - .1, Z);
@@ -490,8 +573,13 @@ function render() {
                : (m <= 1 || m === 11) ? "winter" : m <= 4 ? "spring" : m <= 7 ? "summer" : "autumn";
   const weather = q.get("weather") || LIVE || (season === "winter" ? "snow" : season === "spring" ? "rain" : "clear");
 
+  // The day at the house picks today's clutter in the yard (?day=anything previews another day)
+  const dayKey = q.get("day") || `${t.year}-${t.month + 1}-${t.day}`;
+  const daySeed = [...dayKey].reduce((a, c) => Math.imul(a ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261);
+
   const light = PHASES[phase].light || (weather === "clear" ? null : [.8, .9, .9, .9]);
-  if (season + weather + phase !== sceneKey) { sceneKey = season + weather + phase; buildScene(season, weather, light, PHASES[phase].light); glowKey = ""; }
+  const key = season + weather + phase + dayKey;
+  if (key !== sceneKey) { sceneKey = key; buildScene(season, weather, light, PHASES[phase].light, phase, daySeed); glowKey = ""; }
   const gk = phase + Math.floor(h) + sceneKey;
   if (gk === glowKey) return;
   glowKey = gk;

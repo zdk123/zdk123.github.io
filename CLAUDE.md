@@ -12,13 +12,15 @@ The top of the page is a window looking out on a backyard: a stylized SVG drawin
 - The opening sentence ("It's dark here, and it's raining on the yard.") is generated from phase, season and weather.
 - The page re-checks every 30 seconds; weather every 15 minutes.
 
-To preview other conditions, use URL overrides: `?hour=21&weather=snow&season=winter` (weather: clear | cloudy | rain | snow).
+- **Clutter**: only the hoop stays put. Each day (the date in Brooklyn) seeds `dailyClutter()`: the sit-and-spin (most days), the ring frisbee (some days) and a few balls (big and small basketball, soccer ball, baseballs) in random spots, the same all day; fewer in winter. Summer adds the hose and a sprinkler, spraying on most dry days in daylight. In winter balls sit in the snow with a cap of it; on snowing days they're half buried, baseballs disappear, and the snowman appears. Every random roll happens regardless of hour, so nothing moves when the light changes.
+
+To preview other conditions, use URL overrides: `?hour=21&weather=snow&season=winter&day=x` (weather: clear | cloudy | rain | snow; day: any string, a different one gives a different day's clutter).
 
 ## Where things live (all in index.html)
 - `<style>`: layout and animations. Colours come from CSS variables (`--sky`, `--room`, `--ink`, …), which the script sets.
 - The sill paragraphs (bio, "Things I'm working on", contact) are plain HTML in `.sill`.
 - `PHASES` / `SEASONS`: the colour palettes.
-- `buildScene()`: draws the yard with a small perspective projection `P(X, Y, Z)` (metres; X left/right, Y up, Z distance from the window). Season changes the trees, hammock, snow cover and snowman.
+- `buildScene()`: draws the yard with a small perspective projection `P(X, Y, Z)` (metres; X left/right, Y up, Z distance from the window). Season changes the trees, hammock and snow cover; `ball()` and `dailyClutter()` draw the day's toys.
 - `buildGlow()`: the light layer (lit windows, string lights, fire pit, stars, moon) plus a colour wash for dawn/dusk/night.
 - `fit()`: sets the shared viewBox so wide screens see more width and tall screens see full height.
 - `render()`: works out phase, season and weather, then updates the variables, the opener line and the rain or snow particles.
